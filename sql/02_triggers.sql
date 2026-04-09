@@ -115,14 +115,14 @@ BEGIN
 END //
 
 -- ----------------------------------------------------------
--- STORED PROCEDURE: Validate registration
+-- STORED PROCEDURE: sp_register_racer
+-- Handles RBAC, validation, and inserting the registration
 -- ----------------------------------------------------------
-DROP PROCEDURE IF EXISTS sp_validate_registration;
-CREATE PROCEDURE sp_validate_registration(
+DROP PROCEDURE IF EXISTS sp_register_racer;
+CREATE PROCEDURE sp_register_racer(
+    IN p_user_role VARCHAR(20),
     IN p_stage_id INT,
-    IN p_contract_id INT,
-    OUT p_is_valid BOOLEAN,
-    OUT p_message VARCHAR(255)
+    IN p_contract_id INT
 )
 BEGIN
     DECLARE v_team_id INT;
@@ -130,43 +130,80 @@ BEGIN
     DECLARE v_racer_status VARCHAR(20);
     DECLARE v_already_registered INT;
 
-    -- Get team from contract
-    SELECT team_id INTO v_team_id FROM contract WHERE id = p_contract_id;
-
-    -- Check if already registered
-    SELECT COUNT(*) INTO v_already_registered
-    FROM registration
-    WHERE stage_id = p_stage_id AND contract_id = p_contract_id;
-
-    IF v_already_registered > 0 THEN
-        SET p_is_valid = FALSE;
-        SET p_message = 'Tay đua đã được đăng ký cho chặng đua này';
-    ELSE
-        -- Check racer status is Active
-        SELECT r.status INTO v_racer_status
-        FROM racer r
-        JOIN contract c ON c.racer_id = r.id
-        WHERE c.id = p_contract_id;
-
-        IF v_racer_status != 'Active' THEN
-            SET p_is_valid = FALSE;
-            SET p_message = CONCAT('Tay đua không ở trạng thái hoạt động (', v_racer_status, ')');
-        ELSE
-            -- Count how many drivers from this team are already registered
-            SELECT COUNT(*) INTO v_driver_count
-            FROM registration reg
-            JOIN contract c ON reg.contract_id = c.id
-            WHERE reg.stage_id = p_stage_id AND c.team_id = v_team_id;
-
-            IF v_driver_count >= 2 THEN
-                SET p_is_valid = FALSE;
-                SET p_message = 'Đội đua đã đăng ký đủ 2 tay đua cho chặng đua này';
-            ELSE
-                SET p_is_valid = TRUE;
-                SET p_message = 'OK';
-            END IF;
-        END IF;
+    -- 1. RBAC Check: Only admins can register racers
+    IF p_user_role != 'admin' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lỗi bảo mật DBMS: Chỉ Admin mới được phép đăng ký tay đua!';
     END IF;
+
+    -- 2. Validation
+    SELECT team_id INTO v_team_id FROM contract WHERE id = p_contract_id;
+    
+    SELECT COUNT(*) INTO v_already_registered FROM registration WHERE stage_id = p_stage_id AND contract_id = p_contract_id;
+    IF v_already_registered > 0 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Tay đua đã được đăng ký cho chặng đua này';
+    END IF;
+
+    SELECT r.status INTO v_racer_status FROM racer r JOIN contract c ON c.racer_id = r.id WHERE c.id = p_contract_id;
+    IF v_racer_status != 'Active' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Tay đua không ở trạng thái hoạt động';
+    END IF;
+
+    SELECT COUNT(*) INTO v_driver_count FROM registration reg JOIN contract c ON reg.contract_id = c.id WHERE reg.stage_id = p_stage_id AND c.team_id = v_team_id;
+    IF v_driver_count >= 2 THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Đội đua đã đăng ký đủ tối đa 2 tay đua cho chặng đua này!';
+    END IF;
+
+    -- 3. Execution (inside an implicit transaction of single statement)
+    INSERT INTO registration (stage_id, contract_id) VALUES (p_stage_id, p_contract_id);
+END //
+
+-- ----------------------------------------------------------
+-- STORED PROCEDURE: sp_save_results
+-- Batch upserts results from JSON array with RBAC check
+-- ----------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_save_results;
+CREATE PROCEDURE sp_save_results(
+    IN p_user_role VARCHAR(20),
+    IN p_stage_id INT,
+    IN p_updated_by INT,
+    IN p_results_json JSON
+)
+BEGIN
+    -- 1. RBAC Check: admin or staff
+    IF p_user_role != 'admin' AND p_user_role != 'staff' THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lỗi bảo mật DBMS: Bạn không có quyền cật nhật kết quả!';
+    END IF;
+
+    -- 2. Execution with SQL Transaction
+    -- JSON_TABLE maps the input JSON to rows. 
+    -- If any row triggers an error (e.g., regex trigger or negative lap), 
+    -- the entire INSERT statement fails and automatically rolls back!
+    START TRANSACTION;
+    
+    INSERT INTO result (stage_id, contract_id, finish_time, laps_completed, finish_rank, status, updated_by)
+    SELECT p_stage_id, contract_id, 
+           CASE WHEN finish_time = '' THEN NULL ELSE finish_time END, 
+           laps_completed, 
+           CASE WHEN finish_rank = 0 THEN NULL ELSE finish_rank END, 
+           status, p_updated_by
+    FROM JSON_TABLE(
+      p_results_json,
+      '$[*]' COLUMNS (
+        contract_id INT PATH '$.contract_id',
+        finish_time VARCHAR(20) PATH '$.finish_time',
+        laps_completed INT PATH '$.laps_completed',
+        finish_rank INT PATH '$.finish_rank',
+        status VARCHAR(20) PATH '$.status'
+      )
+    ) AS jt
+    ON DUPLICATE KEY UPDATE 
+       finish_time = VALUES(finish_time), 
+       laps_completed = VALUES(laps_completed),
+       finish_rank = VALUES(finish_rank),
+       status = VALUES(status),
+       updated_by = VALUES(updated_by);
+       
+    COMMIT;
 END //
 
 DELIMITER ;

@@ -26,6 +26,19 @@ function isLoggedIn() {
     return isset($_SESSION['user_id']);
 }
 
+// Check if user is admin
+function isAdmin() {
+    return isLoggedIn() && isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+}
+
+// Require admin — redirect if not authenticated or not admin
+function requireAdmin() {
+    if (!isAdmin()) {
+        header('Location: dashboard.php');
+        exit();
+    }
+}
+
 // Require login — redirect if not authenticated
 function requireLogin() {
     if (!isLoggedIn()) {

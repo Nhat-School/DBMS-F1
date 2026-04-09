@@ -1,6 +1,6 @@
 <?php
 require_once 'config/database.php';
-requireLogin();
+requireAdmin();
 
 $pageTitle = 'Đăng ký thi đấu — F1 Championship';
 $message = '';
@@ -50,46 +50,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $message = 'Vui lòng chọn 1 hoặc 2 tay đua để đăng ký.';
         $messageType = 'error';
     } else {
-        // START TRANSACTION
+        // PHP still keeps its application-level transaction across multiple racers
         $conn->begin_transaction();
         try {
-            $success = true;
-            $errorMsg = '';
-
+            $role = getCurrentUser()['role'];
+            
             foreach ($selectedContracts as $contractId) {
                 $contractId = intval($contractId);
-
-                // Call stored procedure to validate
-                $stmt = $conn->prepare("CALL sp_validate_registration(?, ?, @is_valid, @msg)");
-                $stmt->bind_param("ii", $stageId, $contractId);
-                $stmt->execute();
-                $stmt->close();
-
-                // Get output parameters
-                $validResult = $conn->query("SELECT @is_valid as is_valid, @msg as msg")->fetch_assoc();
-
-                if (!$validResult['is_valid']) {
-                    $success = false;
-                    $errorMsg = $validResult['msg'];
-                    break;
-                }
-
-                // Insert registration
-                $stmt = $conn->prepare("INSERT INTO registration (stage_id, contract_id) VALUES (?, ?)");
-                $stmt->bind_param("ii", $stageId, $contractId);
+                // Call stored procedure to check RBAC, validate, AND execute INSERT
+                // It will throw a MySQL Exception if anything fails, triggering our catch block
+                $stmt = $conn->prepare("CALL sp_register_racer(?, ?, ?)");
+                $stmt->bind_param("sii", $role, $stageId, $contractId);
                 $stmt->execute();
                 $stmt->close();
             }
 
-            if ($success) {
-                $conn->commit();
-                $message = 'Đăng ký thi đấu thành công! Đã đăng ký ' . count($selectedContracts) . ' tay đua.';
-                $messageType = 'success';
-            } else {
-                $conn->rollback();
-                $message = 'Đăng ký thất bại: ' . $errorMsg;
-                $messageType = 'error';
-            }
+            $conn->commit();
+            $message = 'Đăng ký thi đấu thành công! Đã đăng ký ' . count($selectedContracts) . ' tay đua.';
+            $messageType = 'success';
         } catch (Exception $e) {
             $conn->rollback();
             $message = 'Lỗi hệ thống: ' . $e->getMessage();

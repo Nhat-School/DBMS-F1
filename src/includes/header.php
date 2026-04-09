@@ -28,9 +28,11 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <a href="dashboard.php" class="nav-link <?php echo $currentPage === 'dashboard.php' ? 'active' : ''; ?>">
                 <i class="fas fa-home"></i> Trang chủ
             </a>
+            <?php if (isAdmin()): ?>
             <a href="register.php" class="nav-link <?php echo $currentPage === 'register.php' ? 'active' : ''; ?>">
                 <i class="fas fa-user-plus"></i> Đăng ký
             </a>
+            <?php endif; ?>
             <a href="update_results.php" class="nav-link <?php echo $currentPage === 'update_results.php' ? 'active' : ''; ?>">
                 <i class="fas fa-flag-checkered"></i> Kết quả
             </a>
@@ -42,7 +44,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             </a>
         </div>
         <div class="nav-user">
-            <span class="user-name"><i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($user['full_name']); ?></span>
+            <span class="user-name">
+                <i class="fas fa-user-circle"></i> <?php echo htmlspecialchars($user['full_name']); ?>
+                <span class="badge" style="font-size: 0.7rem; padding: 2px 6px; background: rgba(255,255,255,0.1); border-radius: 4px; margin-left: 6px; position: relative; top: -1px;">
+                    <?php echo $user['role'] === 'admin' ? 'ADMIN' : 'STAFF'; ?>
+                </span>
+            </span>
             <a href="logout.php" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
         </div>
     </nav>

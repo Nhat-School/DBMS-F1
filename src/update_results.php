@@ -62,8 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $stageLaps = $stageInfo->get_result()->fetch_assoc()['number_laps'];
     $stageInfo->close();
 
-    $conn->begin_transaction();
     try {
+        $role = getCurrentUser()['role'];
+
         // First, collect all finished racers to calculate rank
         $finishedRacers = [];
         $otherRacers = [];
@@ -110,49 +111,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         unset($racer);
 
-        // Merge back
+        // Merge back and convert to JSON format required by our sp_save_results
         $allRacers = array_merge($finishedRacers, $otherRacers);
+        $jsonPayload = json_encode($allRacers);
 
-        // Insert or update results
-        foreach ($allRacers as $racer) {
-            $finishRank = $racer['finish_rank'] ?? null;
-            $finishTime = !empty($racer['finish_time']) ? $racer['finish_time'] : null;
+        // Let the Database handle the Transaction natively via Stored Procedure
+        $stmt = $conn->prepare("CALL sp_save_results(?, ?, ?, ?)");
+        $stmt->bind_param("siis", $role, $stageId, $userId, $jsonPayload);
+        $stmt->execute();
+        $stmt->close();
 
-            // Check if result already exists
-            $checkStmt = $conn->prepare("SELECT id FROM result WHERE stage_id = ? AND contract_id = ?");
-            $checkStmt->bind_param("ii", $stageId, $racer['contract_id']);
-            $checkStmt->execute();
-            $existing = $checkStmt->get_result()->fetch_assoc();
-            $checkStmt->close();
-
-            if ($existing) {
-                // UPDATE (trigger will auto-calculate score)
-                $stmt = $conn->prepare("
-                    UPDATE result
-                    SET finish_time = ?, laps_completed = ?, finish_rank = ?, status = ?, updated_by = ?
-                    WHERE stage_id = ? AND contract_id = ?
-                ");
-                $stmt->bind_param("siisiii",
-                    $finishTime, $racer['laps_completed'], $finishRank,
-                    $racer['status'], $userId, $stageId, $racer['contract_id']
-                );
-            } else {
-                // INSERT (trigger will auto-calculate score)
-                $stmt = $conn->prepare("
-                    INSERT INTO result (stage_id, contract_id, finish_time, laps_completed, finish_rank, status, updated_by)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ");
-                $stmt->bind_param("iisiisi",
-                    $stageId, $racer['contract_id'], $finishTime,
-                    $racer['laps_completed'], $finishRank, $racer['status'], $userId
-                );
-            }
-            $stmt->execute();
-            $stmt->close();
-        }
-
-        $conn->commit();
-        $message = 'Cập nhật kết quả thành công! Điểm số đã được tính tự động bởi Trigger.';
+        $message = 'Cập nhật kết quả thành công! Hệ thống SQL đã xác thực giao dịch.';
         $messageType = 'success';
 
         // Reload data
@@ -177,8 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $stmt->close();
 
     } catch (Exception $e) {
-        $conn->rollback();
-        $message = 'Lỗi: ' . $e->getMessage();
+        // We no longer require $conn->rollback() because SQL handles it inside the SP implicit transaction
+        $message = 'Lỗi cập nhật: ' . $e->getMessage();
         $messageType = 'error';
     }
 }
