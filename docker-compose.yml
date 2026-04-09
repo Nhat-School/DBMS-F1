@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    container_name: f1_app
+    ports:
+      - "8081:80"
+    depends_on:
+      - db
+    volumes:
+      - ./src:/var/www/html
+
+  db:
+    image: mysql:8.0
+    container_name: f1_db
+    environment:
+      MYSQL_DATABASE: f1_championship
+      MYSQL_ROOT_PASSWORD: securepassword
+    ports:
+      - "3307:3306"
+    volumes:
+      - f1_db_data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d/
+
+volumes:
+  f1_db_data:
