@@ -3,12 +3,67 @@
 -- 02_triggers.sql — Triggers & Stored Procedures
 -- ============================================================
 
+SET NAMES utf8mb4;
+
 DELIMITER //
 
 -- ----------------------------------------------------------
--- TRIGGER: Auto-assign F1 score on INSERT
--- Standard F1 scoring: 25, 18, 15, 12, 10, 8, 6, 4, 2, 1
+-- TRIGGER: Validate finish_time format Before INSERT
+-- Loosened regex: H+:m?:s? (allows single digits for min/sec)
 -- ----------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_validate_time_insert;
+CREATE TRIGGER trg_validate_time_insert
+BEFORE INSERT ON `result`
+FOR EACH ROW
+BEGIN
+    DECLARE v_stage_laps INT;
+
+    -- Validate time format (HH:MM:SS.mmm - Phút/giây < 60, hỗ trợ 1 chữ số)
+    IF NEW.finish_time IS NOT NULL AND NEW.finish_time != '' THEN
+        IF NEW.finish_time NOT REGEXP '^[0-9]+:[0-5]?[0-9]:[0-5]?[0-9](\\.[0-9]+)?$' THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lỗi: Thời gian kết thúc phải đúng định dạng H:M:S (Phút và Giây < 60!)';
+        END IF;
+    END IF;
+
+    -- Validate if Status is Finished but laps are not completed
+    IF NEW.status = 'Finished' THEN
+        SELECT number_laps INTO v_stage_laps FROM stage WHERE id = NEW.stage_id;
+        IF NEW.laps_completed < v_stage_laps THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lỗi: Trạng thái "Về đích" nhưng số vòng đua chưa đạt đủ yêu cầu của chặng!';
+        END IF;
+    END IF;
+END //
+
+-- ----------------------------------------------------------
+-- TRIGGER: Validate finish_time format Before UPDATE
+-- ----------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_validate_time_update;
+CREATE TRIGGER trg_validate_time_update
+BEFORE UPDATE ON `result`
+FOR EACH ROW
+BEGIN
+    DECLARE v_stage_laps INT;
+
+    -- Validate time format (HH:MM:SS.mmm - Phút/giây < 60)
+    IF NEW.finish_time IS NOT NULL AND NEW.finish_time != '' THEN
+        IF NEW.finish_time NOT REGEXP '^[0-9]+:[0-5]?[0-9]:[0-5]?[0-9](\\.[0-9]+)?$' THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lỗi: Thời gian kết thúc phải đúng định dạng H:M:S (Phút và Giây < 60!)';
+        END IF;
+    END IF;
+
+    -- Validate if Status is Finished but laps are not completed
+    IF NEW.status = 'Finished' THEN
+        SELECT number_laps INTO v_stage_laps FROM stage WHERE id = NEW.stage_id;
+        IF NEW.laps_completed < v_stage_laps THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Lỗi: Trạng thái "Về đích" nhưng số vòng đua chưa đạt đủ yêu cầu của chặng!';
+        END IF;
+    END IF;
+END //
+
+-- ----------------------------------------------------------
+-- TRIGGER: Auto-assign F1 score on INSERT
+-- ----------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_assign_score_insert;
 CREATE TRIGGER trg_assign_score_insert
 BEFORE INSERT ON `result`
 FOR EACH ROW
@@ -35,6 +90,7 @@ END //
 -- ----------------------------------------------------------
 -- TRIGGER: Auto-assign F1 score on UPDATE
 -- ----------------------------------------------------------
+DROP TRIGGER IF EXISTS trg_assign_score_update;
 CREATE TRIGGER trg_assign_score_update
 BEFORE UPDATE ON `result`
 FOR EACH ROW
@@ -60,8 +116,8 @@ END //
 
 -- ----------------------------------------------------------
 -- STORED PROCEDURE: Validate registration
--- Enforces "max 2 drivers per team per stage" rule
 -- ----------------------------------------------------------
+DROP PROCEDURE IF EXISTS sp_validate_registration;
 CREATE PROCEDURE sp_validate_registration(
     IN p_stage_id INT,
     IN p_contract_id INT,

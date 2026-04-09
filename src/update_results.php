@@ -88,7 +88,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             if ($b['laps_completed'] !== $a['laps_completed']) {
                 return $b['laps_completed'] - $a['laps_completed'];
             }
-            return strcmp($a['finish_time'], $b['finish_time']);
+            
+            $timeToMs = function($t) {
+                if (!$t) return 0;
+                $p = explode(':', $t);
+                $h = isset($p[0]) ? intval($p[0]) : 0;
+                $m = isset($p[1]) ? intval($p[1]) : 0;
+                $sParts = explode('.', $p[2] ?? '0');
+                $s = intval($sParts[0]);
+                $ms = isset($sParts[1]) ? floatval('0.' . $sParts[1]) * 1000 : 0;
+                return ($h * 3600 + $m * 60 + $s) * 1000 + $ms;
+            };
+
+            return $timeToMs($a['finish_time']) <=> $timeToMs($b['finish_time']);
         });
 
         // Assign ranks

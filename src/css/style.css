@@ -5,12 +5,12 @@
 
 /* --- CSS Variables (Design Tokens) --- */
 :root {
-    --bg-primary: #0a0a0f;
-    --bg-secondary: #12121a;
-    --bg-card: #1a1a28;
-    --bg-card-hover: #222236;
-    --bg-input: #0e0e18;
-    --bg-navbar: rgba(10, 10, 15, 0.95);
+    --bg-primary: #161a23;
+    --bg-secondary: #1d222e;
+    --bg-card: #242a38;
+    --bg-card-hover: #2c3345;
+    --bg-input: #141720;
+    --bg-navbar: rgba(22, 26, 35, 0.95);
 
     --f1-red: #E10600;
     --f1-red-dark: #b80500;
