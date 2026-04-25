@@ -53,14 +53,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         // PHP still keeps its application-level transaction across multiple racers
         $conn->begin_transaction();
         try {
-            $role = getCurrentUser()['role'];
+            $user = getCurrentUser();
+            $role = $user['role'];
+            $userId = $user['id'];
             
             foreach ($selectedContracts as $contractId) {
                 $contractId = intval($contractId);
                 // Call stored procedure to check RBAC, validate, AND execute INSERT
                 // It will throw a MySQL Exception if anything fails, triggering our catch block
-                $stmt = $conn->prepare("CALL sp_register_racer(?, ?, ?)");
-                $stmt->bind_param("sii", $role, $stageId, $contractId);
+                $stmt = $conn->prepare("CALL sp_register_racer(?, ?, ?, ?)");
+                $stmt->bind_param("siii", $role, $userId, $stageId, $contractId);
                 $stmt->execute();
                 $stmt->close();
             }

@@ -106,11 +106,14 @@ CREATE TABLE IF NOT EXISTS `registration` (
     `id`            INT AUTO_INCREMENT PRIMARY KEY,
     `stage_id`      INT NOT NULL,
     `contract_id`   INT NOT NULL,
+    `registered_by` INT DEFAULT NULL,
     `registered_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`stage_id`) REFERENCES `stage`(`id`)
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`contract_id`) REFERENCES `contract`(`id`)
         ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (`registered_by`) REFERENCES `user`(`id`)
+        ON DELETE SET NULL ON UPDATE CASCADE,
     UNIQUE KEY `unique_registration` (`stage_id`, `contract_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

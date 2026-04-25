@@ -121,6 +121,7 @@ END //
 DROP PROCEDURE IF EXISTS sp_register_racer;
 CREATE PROCEDURE sp_register_racer(
     IN p_user_role VARCHAR(20),
+    IN p_user_id INT,
     IN p_stage_id INT,
     IN p_contract_id INT
 )
@@ -154,7 +155,7 @@ BEGIN
     END IF;
 
     -- 3. Execution (inside an implicit transaction of single statement)
-    INSERT INTO registration (stage_id, contract_id) VALUES (p_stage_id, p_contract_id);
+    INSERT INTO registration (stage_id, contract_id, registered_by) VALUES (p_stage_id, p_contract_id, p_user_id);
 END //
 
 -- ----------------------------------------------------------
