@@ -49,26 +49,12 @@ if ($selectedStage) {
         } else {
             // Get cumulative team standings up to selected stage
             $stmt = $conn->prepare("
-                SELECT
-                    t.id as team_id,
-                    t.team_code,
-                    t.name as team_name,
-                    t.brand,
-                    COALESCE(SUM(res.score), 0) as total_points,
-                    COALESCE(SUM(
-                        CASE WHEN res.finish_time IS NOT NULL AND res.finish_time != ''
-                        THEN TIME_TO_SEC(res.finish_time) ELSE 0 END
-                    ), 0) as total_time_seconds
-                FROM team t
-                JOIN contract c ON c.team_id = t.id
-                JOIN result res ON res.contract_id = c.id
-                JOIN stage s ON res.stage_id = s.id
-                WHERE s.tournament_id = (SELECT tournament_id FROM stage WHERE id = ?)
-                  AND s.stage_order <= (SELECT stage_order FROM stage WHERE id = ?)
-                GROUP BY t.id, t.team_code, t.name, t.brand
+                SELECT * 
+                FROM vw_team_standings 
+                WHERE stage_id = ? 
                 ORDER BY total_points DESC, total_time_seconds ASC
             ");
-            $stmt->bind_param("ii", $stageId, $stageId);
+            $stmt->bind_param("i", $stageId);
             $stmt->execute();
             $standings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             $stmt->close();

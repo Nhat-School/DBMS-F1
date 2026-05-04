@@ -1,1 +1,23 @@
+# Documentation
 N09 - 10 - F1 Formula Championship Management - Requirments.docx
+
+# Data & CSV files (Trade bot data should be ignored)
+data/
+*.csv
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environments & Dependencies
+.env
+vendor/
+node_modules/
+.gemini/
+.openclaw/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.bak

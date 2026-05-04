@@ -111,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         unset($racer);
 
-        // Merge back and convert to JSON format required by our sp_save_results
+        // Merge back and convert to JSON format required by  sp_save_results
         $allRacers = array_merge($finishedRacers, $otherRacers);
         $jsonPayload = json_encode($allRacers);
 

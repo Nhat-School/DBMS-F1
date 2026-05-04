@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div style="text-align: center; margin-top: 24px; color: var(--text-muted); font-size: 0.8rem;">
                 <p>Tài khoản demo: <strong>staff1</strong> / <strong>staff123</strong></p>
+                <p>Tài khoản admin : <strong>admin</strong> / <strong>admin123</strong></p>
             </div>
         </div>
     </div>
