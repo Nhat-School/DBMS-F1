@@ -57,7 +57,8 @@ CREATE TABLE IF NOT EXISTS `stage` (
     `stage_order`   INT NOT NULL,
     `description`   TEXT,
     FOREIGN KEY (`tournament_id`) REFERENCES `tournament`(`id`)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    INDEX `idx_tournament_order` (`tournament_id`, `stage_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------
@@ -81,7 +82,8 @@ CREATE TABLE IF NOT EXISTS `racer` (
     `nationality` VARCHAR(50),
     `dob`         DATE,
     `biography`   TEXT,
-    `status`      ENUM('Active', 'Injured', 'Suspended') DEFAULT 'Active'
+    `status`      ENUM('Active', 'Injured', 'Suspended') DEFAULT 'Active',
+    INDEX `idx_racer_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------
@@ -137,5 +139,6 @@ CREATE TABLE IF NOT EXISTS `result` (
         ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (`updated_by`) REFERENCES `user`(`id`)
         ON DELETE SET NULL ON UPDATE CASCADE,
-    UNIQUE KEY `unique_result` (`stage_id`, `contract_id`)
+    UNIQUE KEY `unique_result` (`stage_id`, `contract_id`),
+    INDEX `idx_stage_rank` (`stage_id`, `finish_rank`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

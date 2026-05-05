@@ -30,7 +30,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // --- Time format validation (HH:mm:ss.SSS or HH:mm:ss) ---
+    // --- Time format validation (Disabled for testing Trigger) ---
+    /*
     const timeInputs = document.querySelectorAll('.time-input');
     timeInputs.forEach(input => {
         input.addEventListener('blur', function () {
@@ -45,6 +46,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+    */// });
 
     // --- Dynamic team loading for registration page ---
     const stageSelect = document.getElementById('stage_id');

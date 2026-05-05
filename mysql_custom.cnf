@@ -1,0 +1,14 @@
+[mysqld]
+# Tối ưu hóa bộ nhớ đệm (Buffer)
+innodb_buffer_pool_size = 256M
+
+# Tối ưu hóa ghi Log (Storage)
+innodb_log_file_size = 64M
+innodb_log_buffer_size = 16M
+
+# Cấu hình để InnoDB ghi dữ liệu hiệu quả hơn
+innodb_flush_log_at_trx_commit = 1
+innodb_flush_method = O_DIRECT
+
+# Tăng giới hạn kết nối
+max_connections = 100

@@ -1,56 +1,65 @@
-# 🏎️ F1 Championship Management System
+# 🏎️ F1 Formula Championship Management System
 
-Hệ thống quản lý giải đua Xe công thức 1 (F1) được xây dựng dựa trên sự kết hợp giữa PHP và quản trị cơ sở dữ liệu mạnh mẽ (MySQL). Dự án tập trung vào việc thực thi logic nghiệp vụ (Business Logic) và bảo mật trực tiếp tại tầng Database thông qua các Trigger và Stored Procedure.
-
-## 🚀 Tính năng chính
-
-- **Quản lý xếp hạng**: Tự động tính điểm và xếp hạng tay đua/đội đua theo mùa giải.
-- **Cập nhật kết quả**: Nhập kết quả hàng loạt thông qua giao thức truyền tải JSON.
-- **Bảo mật phân quyền**: Kiểm soát quyền Admin/Staff trực tiếp từ tầng Database.
-- **Dữ liệu đa dạng**: Bao gồm 20 đội đua và 44 tay đua (50% là Việt Nam) với các chặng đua tại Hà Nội, Đà Nẵng, TP.HCM, Hoàng Sa...
-
-## 🔐 Tài khoản truy cập & Phân quyền (RBAC)
-
-Hệ thống triển khai phân quyền dựa trên vai trò (Role-Based Access Control) để đảm bảo an toàn dữ liệu:
-
-| Vai trò | Username | Password | Quyền hạn |
-| :--- | :--- | :--- | :--- |
-| **Quản trị viên** | `admin` | `admin123` | Toàn quyền (Đăng ký chặng, Cập nhật kết quả, Xem báo cáo) |
-| **Nhân viên** | `staff1` | `staff123` | Chỉ được phép cập nhật kết quả thi đấu |
-| **Nhân viên** | `staff2` | `staff456` | Chỉ được phép cập nhật kết quả thi đấu |
-
-## ⚙️ Logic Database & Bảo mật tầng thấp (DBMS Centric)
-
-Dự án này đẩy tối đa logic xử lý xuống Database thay vì xử lý bằng mã ứng dụng:
-
-### 1. Quản lý Giao dịch (SQL Transactions)
-- **Tập trung hóa**: Mọi giao dịch quan trọng (như Lưu kết quả) đều được bọc trong `START TRANSACTION` và `COMMIT/ROLLBACK` bên trong Stored Procedure.
-- **Nhập liệu hàng loạt**: Sử dụng `JSON_TABLE` để xử lý danh sách kết quả hàng loạt trong một lần gọi lệnh duy nhất, đảm bảo tính nhất quán (Atomicity).
-
-### 2. Bảo mật thủ tục (Stored Procedure Authorization)
-- **Xác thực vai trò**: Các Stored Procedure như `sp_register_racer` yêu cầu tham số `p_user_role`. Nếu người gọi không phải 'admin', SQL sẽ chủ động chặn đứng bằng lệnh `SIGNAL SQLSTATE`.
-- Điều này đảm bảo ngay cả khi giao diện Web bị can thiệp, dữ liệu gốc vẫn được bảo vệ tuyệt đối bởi Database.
-
-### 3. Ràng buộc dữ liệu (Triggers)
-- **Tự động tính điểm**: Trigger `trg_assign_score` tự động tính điểm theo hạng về đích ( FIA Standard).
-- **Kiểm soát thời gian**: Sử dụng Regular Expression để kiểm tra định dạng `H:M:S` và chặn giá trị phút/giây >= 60.
-- **Ràng buộc chặng đua**: Đội đua chỉ được đăng ký tối đa **2 tay đua** cho mỗi chặng (xác thực qua Procedure).
-
-## 🛠️ Hướng dẫn cài đặt (Docker)
-
-1.  **Clone dự án** về máy.
-2.  Mở terminal và chạy:
-    ```bash
-    docker-compose up -d --build
-    ```
-3.  Truy cập ứng dụng tại: `http://localhost:8081`
-
-## 📂 Cấu trúc SQL
-
-- `01_schema.sql`: Khởi tạo bảng, ràng buộc khóa ngoại và Index.
-- `02_triggers.sql`: Chứa toàn bộ Trigger, Stored Procedure và logic bảo mật (Trái tim hệ thống).
-- `03_views.sql`: Các View thống kê bảng xếp hạng tay đua và đội đua.
-- `04_seed_data.sql`: Dữ liệu mẫu (20 Teams, 44 Racers, 6 VN Stages).
+Hệ thống quản lý giải đua xe Công thức 1 (F1) chuyên nghiệp được xây dựng trên nền tảng **PHP 8.2** và **MySQL 8.0**, triển khai bằng **Docker**. Dự án tập trung tối ưu hóa tầng Cơ sở dữ liệu (DBMS) với các kỹ thuật nâng cao như Triggers, Stored Procedures, Views và Tuning hiệu năng.
 
 ---
-*Dự án tập trung vào việc mô phỏng các nghiệp vụ thực tế của một Hệ quản trị cơ sở dữ liệu (DBMS) chuyên nghiệp.*
+
+## 🚀 Tính năng chính
+- **Quản lý Đăng ký:** Đăng ký tay đua vào các chặng đua với các quy tắc kiểm tra nghiêm ngặt.
+- **Cập nhật Kết quả:** Nhập kết quả đua hàng loạt, tự động tính điểm và xếp hạng.
+- **Bảng xếp hạng Tay đua:** Thống kê tổng điểm tích lũy qua các chặng đua trong mùa giải.
+- **Bảng xếp hạng Đội đua:** Tính tổng điểm của các đội dựa trên thành tích của các tay đua thành viên.
+
+---
+
+## 🛠️ Công nghệ sử dụng
+- **Backend:** PHP 8.2 (Apache)
+- **Database:** MySQL 8.0 (InnoDB Engine)
+- **Containerization:** Docker & Docker Compose
+- **Frontend:** Vanilla CSS (F1 Dark Mode Theme), JavaScript (Form Validation & Toasts)
+
+---
+
+## 💎 Database Optimization & Logic
+
+Dự án này tập trung tối ưu hóa hiệu năng và tính toàn vẹn dữ liệu trực tiếp từ tầng Database:
+
+### 1. Storage Engine & Buffer Tuning
+- **Storage Engine:** Sử dụng **InnoDB** để hỗ trợ Transaction (ACID) và Row-level locking, đảm bảo dữ liệu không bị sai sót khi nhiều người cùng cập nhật.
+- **Buffer Optimization:** Cấu hình tùy chỉnh `innodb_buffer_pool_size = 256M` giúp cache dữ liệu vào RAM, giảm thiểu đọc ghi ổ cứng (Disk I/O).
+- **Direct I/O:** Sử dụng `innodb_flush_method = O_DIRECT` để ghi dữ liệu trực tiếp xuống ổ cứng, tối ưu hóa tốc độ của Engine.
+
+### 2. Indexes (Chỉ mục chiến lược)
+Hệ thống sử dụng các Composite Index (Chỉ mục kép) để tối ưu tốc độ truy vấn:
+- `idx_tournament_order` (Bảng `stage`): Tối ưu việc lọc chặng theo mùa giải và sắp xếp theo thứ tự.
+- `idx_stage_rank` (Bảng `result`): Tối ưu hóa việc xuất bảng xếp hạng chặng đua (`WHERE stage_id` và `ORDER BY finish_rank`).
+- `idx_racer_status` (Bảng `racer`): Tối ưu hóa việc lọc danh sách tay đua đang hoạt động.
+
+### 3. Stored Procedures (Thủ tục lưu trữ)
+Đóng gói logic nghiệp vụ vào Database để tăng tính bảo mật và hiệu năng:
+- `sp_register_racer`: Xử lý đăng ký tay đua một cách nguyên tử (Atomic), kiểm tra quyền (RBAC) và các quy tắc (hết hạn hợp đồng, giới hạn 2 tay đua/đội).
+- `sp_save_results`: Sử dụng định dạng **JSON** để cập nhật hàng loạt kết quả đua trong một giao dịch duy nhất.
+
+### 4. Triggers (Trình kích hoạt tự động)
+- `trg_assign_score`: Tự động tính toán điểm số dựa trên thứ hạng (1st: 25pts, 2nd: 18pts,...) ngay khi lưu kết quả.
+- `trg_validate_time`: Tự động kiểm tra định dạng thời gian và tính hợp lệ của số vòng đua trước khi chèn dữ liệu.
+
+### 5. Views (Bảng ảo thống kê)
+- `vw_racer_standings`: Tổng hợp điểm tích lũy và thời gian của tay đua qua tất cả các chặng.
+- `vw_team_standings`: Tổng hợp điểm số cho các đội đua (Constructors' Championship).
+
+---
+
+## 📦 Hướng dẫn cài đặt
+
+1. **Yêu cầu:** Máy tính đã cài đặt [Docker Desktop]
+2. **Khởi động hệ thống:**
+   ```bash
+   docker-compose up -d
+   ```
+3. **Truy cập:**
+   - Website: [http://localhost:8081](http://localhost:8081)
+   - Database: `localhost:3307` (User: `root` | Pass: `securepassword`)
+
+
+---

@@ -189,7 +189,7 @@ BEGIN
            status, p_updated_by
     FROM JSON_TABLE(
       p_results_json,
-      '$[*]' COLUMNS (
+      '$[*]' COLUMNS (  
         contract_id INT PATH '$.contract_id',
         finish_time VARCHAR(20) PATH '$.finish_time',
         laps_completed INT PATH '$.laps_completed',
